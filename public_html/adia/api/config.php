@@ -1,9 +1,9 @@
 <?php
 // ====== CONFIGURACIÓN GLOBAL (editar) ======
 const DB_HOST = 'localhost';
-const DB_NAME = 'TU_BD';
-const DB_USER = 'TU_USUARIO';
-const DB_PASS = 'TU_PASSWORD';
+const DB_NAME = 'amecreco_adia';
+const DB_USER = 'amecreco_adiauser';
+const DB_PASS = 'Catd2793!';
 
 // JWT (firma HS256)
 const JWT_SECRET = 'cambia-esta-clave-larga-y-aleatoria';
