@@ -6,11 +6,11 @@ const DB_USER = 'amecreco_adiauser';
 const DB_PASS = 'Catd2793!';
 
 // JWT (firma HS256)
-const JWT_SECRET = 'cambia-esta-clave-larga-y-aleatoria';
+const JWT_SECRET = 'Catd2793!';
 const JWT_TTL_SECONDS = 20 * 60; // 20 min
 
 // CORS permitidos
-const CORS_ALLOW_ORIGINS = ['https://adia.amecrec.org', 'http://localhost'];
+const CORS_ALLOW_ORIGINS = ['https://adia.amecrec.org', 'https://chromes.amecrec.org', 'http://localhost'];
 
 // Opcional: validar postbacks de Hotmart con un secreto o firma
 const HOTMART_WEBHOOK_SECRET = 'coloca-un-secreto-opcional';
