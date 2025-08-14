@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Generador de Planeación Didáctica (NEM)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100">
+  <div class="p-4 sm:p-8">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div class="p-6 sm:p-10">
+        <header class="text-center mb-8">
+          <h1 class="text-3xl sm:text-4xl font-extrabold text-blue-800">Generador de Planeación Didáctica</h1>
+          <p class="text-gray-600 mt-2 text-lg">Basado en la Nueva Escuela Mexicana (NEM)</p>
+        </header>
+
+        <form id="nem-form" class="space-y-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label for="nivel-educativo" class="text-sm font-medium text-gray-700 block mb-1">Nivel Educativo</label>
+              <select id="nivel-educativo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="Preescolar">Preescolar</option>
+                <option value="Primaria" selected>Primaria</option>
+                <option value="Secundaria">Secundaria</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="grado" class="text-sm font-medium text-gray-700 block mb-1">Grado</label>
+              <select id="grado" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></select>
+            </div>
+
+            <div>
+              <label class="text-sm font-medium text-gray-700 block mb-1">Modalidad</label>
+              <div class="flex gap-4 items-center">
+                <label class="flex items-center gap-2"><input type="radio" name="modalidad" value="Secuencial" class="text-blue-600" checked /><span>Secuencial</span></label>
+                <label class="flex items-center gap-2"><input type="radio" name="modalidad" value="Proyecto" class="text-blue-600"/><span>Por proyecto</span></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col lg:flex-row lg:flex-nowrap items-start gap-3">
+            <div id="campo-unico-wrapper" class="lg:min-w-[260px] lg:flex-[1.6] w-full">
+              <label for="campo-formativo" class="text-sm font-medium text-gray-700 block mb-1">Campo Formativo</label>
+              <select id="campo-formativo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="LENGUAJES">LENGUAJES</option>
+                <option value="SABERES Y PENSAMIENTO CIENTÍFICO">SABERES Y PENSAMIENTO CIENTÍFICO</option>
+                <option value="ÉTICA, NATURALEZA Y SOCIEDADES">ÉTICA, NATURALEZA Y SOCIEDADES</option>
+                <option value="DE LO HUMANO Y LO COMUNITARIO">DE LO HUMANO Y LO COMUNITARIO</option>
+              </select>
+            </div>
+
+            <div id="campos-multiples-wrapper" class="hidden lg:min-w-[260px] lg:flex-[1.6] w-full">
+              <span class="text-sm font-medium text-gray-700 block mb-1">Campos formativos (elige al menos 2)</span>
+              <div class="relative">
+                <button id="campos-toggle" type="button" class="w-64 flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                  <span id="campos-summary" class="text-sm text-gray-700">Selecciona campos</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.186l3.71-3.955a.75.75 0 111.08 1.04l-4.24 4.52a.75.75 0 01-1.08 0L5.25 8.27a.75.75 0 01-.02-1.06z" clip-rule="evenodd"/></svg>
+                </button>
+                <div id="campos-menu" class="absolute z-20 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg p-3 hidden">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-500">Selecciona dos o más</span>
+                    <div class="space-x-2">
+                      <button type="button" class="text-xs underline" data-cmp-action="all">Seleccionar todo</button>
+                      <button type="button" class="text-xs underline" data-cmp-action="none">Limpiar</button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-1 gap-2">
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="campo-proyecto" value="LENGUAJES" class="w-4 h-4"/> LENGUAJES</label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="campo-proyecto" value="SABERES Y PENSAMIENTO CIENTÍFICO" class="w-4 h-4"/> SABERES Y PENSAMIENTO CIENTÍFICO</label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="campo-proyecto" value="ÉTICA, NATURALEZA Y SOCIEDADES" class="w-4 h-4"/> ÉTICA, NATURALEZA Y SOCIEDADES</label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="campo-proyecto" value="DE LO HUMANO Y LO COMUNITARIO" class="w-4 h-4"/> DE LO HUMANO Y LO COMUNITARIO</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w-full lg:w-auto">
+              <div class="grid grid-cols-2 gap-2">
+                <div class="min-w-[120px]">
+                  <label for="numero-sesiones" class="text-sm font-medium text-gray-700 block mb-1"># Sesiones</label>
+                  <input id="numero-sesiones" type="number" min="1" max="40" value="6" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
+                </div>
+                <div class="min-w-[130px]">
+                  <label for="duracion-sesion" class="text-sm font-medium text-gray-700 block mb-1">Duración (min)</label>
+                  <input id="duracion-sesion" type="number" min="20" max="120" value="50" class="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="lg:flex-1">
+              <span class="text-sm font-medium text-gray-700 block mb-1">Estrategias de evaluación</span>
+              <div class="relative">
+                <button id="estrategias-toggle" type="button" class="w-64 flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                  <span id="estrategias-summary" class="text-sm text-gray-700">Rúbrica, Lista de cotejo</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.186l3.71-3.955a.75.75 0 111.08 1.04l-4.24 4.52a.75.75 0 01-1.08 0L5.25 8.27a.75.75 0 01-.02-1.06z" clip-rule="evenodd"/></svg>
+                </button>
+                <div id="estrategias-menu" class="absolute z-20 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg p-3 hidden">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-gray-500">Selecciona una o varias</span>
+                    <div class="space-x-2">
+                      <button type="button" class="text-xs underline" data-estr-action="all">Seleccionar todo</button>
+                      <button type="button" class="text-xs underline" data-estr-action="none">Limpiar</button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-1 gap-2" id="estrategias">
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="estrategia" value="Rúbrica" class="w-4 h-4" checked/> Rúbrica</label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="estrategia" value="Lista de cotejo" class="w-4 h-4" checked/> Lista de cotejo</label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="estrategia" value="Observación" class="w-4 h-4"/> Observación</label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg hover:bg-gray-50"><input type="checkbox" name="estrategia" value="Portafolio" class="w-4 h-4"/> Portafolio</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="border-t border-gray-200">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label for="gemini-api-key" class="text-sm font-medium text-gray-700 block mb-1">Clave de API de Gemini</label>
+                <input id="gemini-api-key" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ingresa tu clave de Gemini (API Key)"/>
+              </div>
+              <div>
+                <label for="jwt-token" class="text-sm font-medium text-gray-700 block mb-1">Token de Acceso (JWT)</label>
+                <input id="jwt-token" type="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Pega aquí tu token JWT" />
+              </div>
+          </div>
+
+          <div>
+            <label for="tema-detonador" class="block mb-2 text-xl font-bold text-gray-800">Tema Detonador</label>
+            <textarea id="tema-detonador" rows="4" class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 shadow-sm text-base" placeholder="Describe la idea o proyecto central que guiará el aprendizaje."></textarea>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xl font-bold text-gray-800">Contenidos</label>
+              <label class="text-xs text-gray-600 inline-flex items-center gap-2 cursor-pointer">
+                <input id="btn-cargar-xlsx" type="file" accept=".xlsx,.xls" class="hidden"/>
+                <span class="underline">Cargar base (XLSX)</span>
+              </label>
+            </div>
+            <div class="relative">
+              <button id="contenidos-toggle" type="button" class="w-full md:w-2/3 flex items-center justify-between px-3 py-2 border-2 border-gray-300 rounded-xl hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                <span id="contenidos-summary" class="text-sm text-gray-700">Selecciona contenidos</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.186l3.71-3.955a.75.75 0 111.08 1.04l-4.24 4.52a.75.75 0 01-1.08 0L5.25 8.27a.75.75 0 01-.02-1.06z" clip-rule="evenodd"/></svg>
+              </button>
+              <div id="contenidos-menu" class="absolute z-20 mt-2 w-full md:w-2/3 bg-white border border-gray-200 rounded-xl shadow-lg p-3 hidden max-h-96 overflow-auto">
+                <div class="flex items-center justify-between mb-2">
+                  <span id="contenidos-hint" class="text-xs text-gray-500">Opciones según grado y campo(s)</span>
+                  <div class="space-x-2">
+                    <button type="button" class="text-xs underline" data-cont-action="all">Seleccionar todo</button>
+                    <button type="button" class="text-xs underline" data-cont-action="none">Limpiar</button>
+                  </div>
+                </div>
+                <div id="contenidos-options" class="space-y-3"></div>
+                <p id="contenidos-empty" class="text-sm text-gray-500 hidden">Carga la base (JSON/XLSX) o cambia grado/campo.</p>
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Tips: si existe CON_PLAN.json en la misma carpeta se carga solo; si no, sube tu XLSX. Después elige Grado y Campo(s). En Proyecto verás secciones por campo.</p>
+          </div>
+
+          <div>
+            <label for="pda" class="block mb-2 text-xl font-bold text-gray-800">Procesos de Desarrollo de Aprendizaje (PDA)</label>
+            <textarea id="pda" rows="5" class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 shadow-sm text-base" placeholder="Lista los PDA correspondientes (separados por ';')."></textarea>
+          </div>
+
+          <div>
+            <label for="objetivos" class="block mb-2 text-xl font-bold text-gray-800">Objetivos de aprendizaje</label>
+            <textarea id="objetivos" rows="3" class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 shadow-sm text-base" placeholder="Ej.: Desarrollar habilidades de ...; Comprender el concepto de ..."></textarea>
+          </div>
+
+          <div>
+            <label for="productos" class="block mb-2 text-xl font-bold text-gray-800">Productos esperados</label>
+            <textarea id="productos" rows="3" class="w-full p-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 shadow-sm text-base" placeholder="Ej.: Informe breve; cartel; prototipo; presentación."></textarea>
+          </div>
+
+          <div>
+            <label for="recursos" class="text-sm font-medium text-gray-700 block mb-1">Recursos y materiales disponibles (opcional)</label>
+            <input id="recursos" type="text" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Aula, internet, proyector, cartulinas, etc." />
+          </div>
+
+          <div class="flex items-center justify-between gap-4">
+            <button id="btn-generar" type="button" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white font-semibold rounded-xl shadow transition">Generar Planeación</button>
+            <p class="text-sm text-gray-500">Los recuadros de salida son editables. Puedes copiar cada uno.</p>
+          </div>
+        </form>
+
+        <section id="outputs" class="mt-10 space-y-6 hidden">
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-bold text-blue-900">Prompt sugerido (para IA)</h3>
+              <button data-copy="#prompt-sugerido" class="btn-copy text-sm px-3 py-1 rounded border border-blue-300 hover:bg-blue-100">Copiar</button>
+            </div>
+            <textarea id="prompt-sugerido" class="w-full h-40 p-3 bg-white border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-300 focus:border-blue-400 text-sm"></textarea>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-bold text-gray-900">Planeación (editable)</h3>
+              <button data-copy="#planeacion" class="btn-copy text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">Copiar</button>
+            </div>
+            <textarea id="planeacion" class="w-full h-64 p-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm"></textarea>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-bold text-gray-900">Materiales de apoyo (editable)</h3>
+              <button data-copy="#materiales" class="btn-copy text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">Copiar</button>
+            </div>
+            <textarea id="materiales" class="w-full h-48 p-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm"></textarea>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-bold text-gray-900">Rúbrica (editable)</h3>
+              <button data-copy="#rubrica" class="btn-copy text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">Copiar</button>
+            </div>
+            <textarea id="rubrica" class="w-full h-60 p-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm"></textarea>
+          </div>
+
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-lg font-bold text-gray-900">Lista de cotejo (editable)</h3>
+              <button data-copy="#lista-cotejo" class="btn-copy text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100">Copiar</button>
+            </div>
+            <textarea id="lista-cotejo" class="w-full h-52 p-3 bg-white border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-400 text-sm"></textarea>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======= Referencias =======
+    const nivelSelect = document.getElementById('nivel-educativo');
+    const gradoSelect = document.getElementById('grado');
+    const modalidadRadios = document.querySelectorAll('input[name="modalidad"]');
+    const campoUnicoWrapper = document.getElementById('campo-unico-wrapper');
+    const camposMultiplesWrapper = document.getElementById('campos-multiples-wrapper');
+    const outputs = document.getElementById('outputs');
+    const btnGenerar = document.getElementById('btn-generar');
+
+    // ====== DB dinámica desde XLSX ======
+    let DB = null; // { grado -> { campo -> { contenidos:[], pda:[], byContenido: { contenido: [pda] } } } }
+
+    async function parseXLSX(file) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheetName = wb.SheetNames.includes('COMPLETO') ? 'COMPLETO' : wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+      function normGrado(g) { const m = String(g).match(/\d+/); if (!m) return String(g).trim(); const n = parseInt(m[0], 10); return isNaN(n) ? String(g).trim() : String(n); }
+      const map = {};
+      rows.forEach(r => {
+        const grado = normGrado(r['GRADO']);
+        const campo = String(r['CAMPO FORMATIVO'] || '').trim();
+        const contenido = String(r['CONTENIDO'] || '').trim();
+        const pda = String(r['PDA'] || '').trim();
+        if (!grado || !campo) return;
+        map[grado] = map[grado] || {};
+        map[grado][campo] = map[grado][campo] || { contenidos: new Set(), pda: new Set(), byContenido: {} };
+        if (contenido) {
+          map[grado][campo].contenidos.add(contenido);
+          map[grado][campo].byContenido[contenido] = map[grado][campo].byContenido[contenido] || new Set();
+          if (pda) map[grado][campo].byContenido[contenido].add(pda);
+        }
+        if (pda) map[grado][campo].pda.add(pda);
+      });
+      Object.keys(map).forEach(g => {
+        Object.keys(map[g]).forEach(c => {
+          const entry = map[g][c];
+          const byCont = {};
+          Object.keys(entry.byContenido).forEach(k => { byCont[k] = Array.from(entry.byContenido[k]).sort(); });
+          map[g][c] = {
+            contenidos: Array.from(entry.contenidos).sort(),
+            pda: Array.from(entry.pda).sort(),
+            byContenido: byCont
+          };
+        });
+      });
+      return map;
+    }
+
+    // Carga automática JSON (CON_PLAN.json) si existe
+    async function loadDefaultJSON() {
+      try {
+        const resp = await fetch('CON_PLAN.json', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (Array.isArray(data)) {
+          // filas: [{GRADO, CAMPO FORMATIVO, CONTENIDO, PDA}, ...]
+          const map = {};
+          const normGrado = g => { const m = String(g).match(/[0-9]+/); if (!m) return String(g).trim(); const n = parseInt(m[0],10); return isNaN(n) ? String(g).trim() : String(n); };
+          data.forEach(r => {
+            const grado = normGrado(r['GRADO']);
+            const campo = String(r['CAMPO FORMATIVO'] || '').trim();
+            const contenido = String(r['CONTENIDO'] || '').trim();
+            const pda = String(r['PDA'] || '').trim();
+            if (!grado || !campo) return;
+            map[grado] = map[grado] || {};
+            map[grado][campo] = map[grado][campo] || { contenidos: new Set(), pda: new Set(), byContenido: {} };
+            if (contenido) {
+              map[grado][campo].contenidos.add(contenido);
+              map[grado][campo].byContenido[contenido] = map[grado][campo].byContenido[contenido] || new Set();
+              if (pda) map[grado][campo].byContenido[contenido].add(pda);
+            }
+            if (pda) map[grado][campo].pda.add(pda);
+          });
+          Object.keys(map).forEach(g => {
+            Object.keys(map[g]).forEach(c => {
+              const entry = map[g][c];
+              const byCont = {};
+              Object.keys(entry.byContenido).forEach(k => { byCont[k] = Array.from(entry.byContenido[k]).sort(); });
+              map[g][c] = {
+                contenidos: Array.from(entry.contenidos).sort(),
+                pda: Array.from(entry.pda).sort(),
+                byContenido: byCont
+              };
+            });
+          });
+          DB = map;
+        } else if (data && typeof data === 'object') {
+          // Se asume esquema final {grado:{campo:{contenidos:[], pda:[], byContenido:{}}}}
+          DB = data;
+        }
+        console.info('Base JSON cargada exitosamente');
+        renderContenidosOptions();
+      } catch (err) {
+        console.warn('No se pudo cargar CON_PLAN.json automáticamente:', err);
+      }
+    }
+
+    const fileInput = document.getElementById('btn-cargar-xlsx');
+    fileInput?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      DB = await parseXLSX(file);
+      renderContenidosOptions();
+      alert('Base cargada correctamente.');
+    });
+
+    const gradosPorNivel = { Preescolar: ['1', '2', '3'], Primaria: ['1', '2', '3', '4', '5', '6'], Secundaria: ['1', '2', '3'] };
+
+    function actualizarGrados(nivel) {
+      gradoSelect.innerHTML = '';
+      gradosPorNivel[nivel].forEach(g => {
+        const o = document.createElement('option');
+        o.value = o.textContent = g;
+        gradoSelect.appendChild(o);
+      });
+    }
+
+    function actualizarUIporModalidad() {
+      const modalidad = document.querySelector('input[name="modalidad"]:checked').value;
+      if (modalidad === 'Proyecto') {
+        campoUnicoWrapper.classList.add('hidden');
+        camposMultiplesWrapper.classList.remove('hidden');
+      } else {
+        camposMultiplesWrapper.classList.add('hidden');
+        campoUnicoWrapper.classList.remove('hidden');
+      }
+      renderContenidosOptions();
+    }
+
+    // ===== Estrategias dropdown refs =====
+    const estrMenu = document.getElementById('estrategias-menu');
+    const estrSummary = document.getElementById('estrategias-summary');
+
+    function selectedEstrategias() {
+      return Array.from(document.querySelectorAll('input[name="estrategia"]:checked')).map(e => e.value);
+    }
+    function updateEstrategiasSummary() {
+      const sel = selectedEstrategias();
+      estrSummary.textContent = sel.length ? sel.join(', ') : 'Selecciona estrategias';
+    }
+
+    // ===== Campos (proyecto) dropdown refs =====
+    const cmpMenu = document.getElementById('campos-menu');
+    const cmpSummary = document.getElementById('campos-summary');
+    function updateCamposSummary() {
+      const sel = Array.from(document.querySelectorAll('input[name=\"campo-proyecto\"]:checked')).map(e => e.value);
+      cmpSummary.textContent = sel.length ? sel.join(', ') : 'Selecciona campos';
+    }
+
+    // ===== Contenidos dropdown (dependiente de grado/campo) =====
+    const contenidosMenu = document.getElementById('contenidos-menu');
+    const contenidosSummary = document.getElementById('contenidos-summary');
+    const contenidosOptions = document.getElementById('contenidos-options');
+    const contenidosEmpty = document.getElementById('contenidos-empty');
+
+    function selectedCampos() {
+      return Array.from(document.querySelectorAll('input[name=\"campo-proyecto\"]:checked')).map(e => e.value);
+    }
+    function getSelectedCampos() {
+      const modalidad = document.querySelector('input[name="modalidad"]:checked').value;
+      return modalidad === 'Proyecto' ? selectedCampos() : [document.getElementById('campo-formativo').value];
+    }
+
+    function renderContenidosOptions() {
+      if (!DB) {
+        contenidosOptions.innerHTML = '';
+        contenidosEmpty.classList.remove('hidden');
+        contenidosSummary.textContent = 'Carga tu base (JSON/XLSX)';
+        return;
+      }
+      contenidosEmpty.classList.add('hidden');
+      const grado = gradoSelect.value;
+      const campos = getSelectedCampos();
+      const modalidad = document.querySelector('input[name="modalidad"]:checked').value;
+      const hintEl = document.getElementById('contenidos-hint');
+      if (hintEl) {
+        // Si es Secuencial y NO es Saberes... limitar a uno; si es Saberes permitir varios
+        const campoSel = (modalidad === 'Secuencial') ? document.getElementById('campo-formativo').value : null;
+        const unica = (modalidad === 'Secuencial' && campoSel !== 'SABERES Y PENSAMIENTO CIENTÍFICO');
+        hintEl.textContent = unica ? 'Selecciona UN contenido' : 'Selecciona uno o varios contenidos';
+      }
+      contenidosOptions.innerHTML = '';
+      let count = 0;
+      campos.forEach((campo) => {
+        const block = document.createElement('div');
+        const h = document.createElement('div');
+        h.className = 'text-xs font-semibold text-gray-600 mb-1';
+        h.textContent = campo;
+        block.appendChild(h);
+        const list = document.createElement('div');
+        list.className = 'grid grid-cols-1 gap-2';
+        const arr = (DB?.[grado]?.[campo]?.contenidos) || [];
+        const campoUnico = (modalidad === 'Secuencial' && campo !== 'SABERES Y PENSAMIENTO CIENTÍFICO');
+        const inputType = (campoUnico ? 'radio' : 'checkbox');
+        const nameAttr = (campoUnico ? `contenido-${campo.replace(/\s+/g,'-')}` : 'contenido');
+        arr.forEach((txt) => {
+          const label = document.createElement('label');
+          label.className = 'flex items-start gap-2 p-2 border rounded-lg hover:bg-gray-50';
+          label.innerHTML = `<input type="${inputType}" name="${nameAttr}" class="mt-1 w-4 h-4 contenido-input" value="${txt.replace(/\"/g,'&quot;')}" data-campo="${campo.replace(/\"/g,'&quot;')}"> <span class="text-sm">${txt}</span>`;
+          list.appendChild(label);
+          count++;
+        });
+        block.appendChild(list);
+        contenidosOptions.appendChild(block);
+      });
+      contenidosSummary.textContent = count ? `Seleccionados: 0 de ${count}` : 'Sin opciones para esta combinación';
+    }
+
+    function updateContenidosSummary() {
+      const checks = Array.from(document.querySelectorAll('.contenido-input:checked'));
+      const total = document.querySelectorAll('.contenido-input').length;
+      if (!total) return;
+      contenidosSummary.textContent = `Seleccionados: ${checks.length} de ${total}`;
+      autoFillPDAFromSelected();
+    }
+
+    // === Autorelleno de PDA según contenidos seleccionados ===
+    function autoFillPDAFromSelected(clearIfNone) {
+      const grado = gradoSelect.value;
+      if (!DB || !grado) return;
+      const selectedInputs = Array.from(document.querySelectorAll('.contenido-input:checked'));
+      const pdaSet = new Set();
+      selectedInputs.forEach(inp => {
+        const campo = inp.getAttribute('data-campo');
+        const cont = inp.value;
+        const arr = DB?.[grado]?.[campo]?.byContenido?.[cont] || [];
+        arr.forEach(x => pdaSet.add(x));
+      });
+      const pdaEl = document.getElementById('pda');
+      if (pdaSet.size) {
+        pdaEl.value = Array.from(pdaSet).sort().join('; ');
+      } else if (clearIfNone) {
+        pdaEl.value = '';
+      }
+    }
+
+    // Copiar
+    function copiar(selector) {
+      const el = document.querySelector(selector);
+      el.select();
+      el.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+    }
+
+    // Eventos globales (toggles y acciones rápidas)
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-copy');
+      if (btn) {
+        const sel = btn.getAttribute('data-copy');
+        copiar(sel);
+        btn.textContent = 'Copiado';
+        setTimeout(() => (btn.textContent = 'Copiar'), 1200);
+        return;
+      }
+      // Toggles
+      if (e.target.closest('#estrategias-toggle')) { e.preventDefault(); estrMenu.classList.toggle('hidden'); return; }
+      if (e.target.closest('#contenidos-toggle')) { e.preventDefault(); contenidosMenu.classList.toggle('hidden'); return; }
+      if (e.target.closest('#campos-toggle')) { e.preventDefault(); cmpMenu.classList.toggle('hidden'); return; }
+
+      // Outside click close
+      if (!e.target.closest('#estrategias-menu')) estrMenu.classList.add('hidden');
+      if (!e.target.closest('#contenidos-menu') && !e.target.closest('#contenidos-toggle')) contenidosMenu.classList.add('hidden');
+      if (!e.target.closest('#campos-menu') && !e.target.closest('#campos-toggle')) cmpMenu.classList.add('hidden');
+
+      // Acciones rápidas estrategias
+      const actionBtn = e.target.closest('[data-estr-action]');
+      if (actionBtn) {
+        const action = actionBtn.getAttribute('data-estr-action');
+        const checks = document.querySelectorAll('input[name="estrategia"]');
+        checks.forEach(c => c.checked = (action === 'all'));
+        updateEstrategiasSummary();
+        return;
+      }
+      // Acciones rápidas campos (proyecto)
+      const cmpAction = e.target.closest('[data-cmp-action]');
+      if (cmpAction) {
+        const action = cmpAction.getAttribute('data-cmp-action');
+        const checks = document.querySelectorAll('input[name="campo-proyecto"]');
+        checks.forEach(c => c.checked = (action === 'all'));
+        updateCamposSummary();
+        renderContenidosOptions();
+        autoFillPDAFromSelected(true);
+        return;
+      }
+      // Acciones rápidas contenidos
+      const contAction = e.target.closest('[data-cont-action]');
+      if (contAction) {
+        const action = contAction.getAttribute('data-cont-action');
+        const inputs = Array.from(document.querySelectorAll('.contenido-input'));
+        const modalidad = document.querySelector('input[name="modalidad"]:checked').value;
+        const campoSel = document.getElementById('campo-formativo').value;
+        const unica = (modalidad === 'Secuencial' && campoSel !== 'SABERES Y PENSAMIENTO CIENTÍFICO');
+        if (action === 'none') {
+          inputs.forEach(i => i.checked = false);
+        } else if (action === 'all') {
+          if (unica) {
+            // Si solo se permite 1, marcar el primero
+            inputs.forEach((i, idx) => i.checked = (idx === 0));
+          } else {
+            inputs.forEach(i => i.checked = true);
+          }
+        }
+        updateContenidosSummary();
+        return;
+      }
+    });
+
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.name === 'estrategia') updateEstrategiasSummary();
+      if (e.target && e.target.classList.contains('contenido-input')) {
+        // En Secuencial + NO Saberes: permitir solo uno por cada bloque (navegador ya lo hace si es radio)
+        updateContenidosSummary();
+      }
+      if (e.target && e.target.name === 'campo-proyecto') {
+        updateCamposSummary();
+        renderContenidosOptions();
+        autoFillPDAFromSelected(true);
+      }
+      if (e.target && e.target.id === 'campo-formativo') { renderContenidosOptions(); autoFillPDAFromSelected(true); }
+      if (e.target && (e.target.id === 'grado' || e.target.id === 'nivel-educativo')) { renderContenidosOptions(); autoFillPDAFromSelected(true); }
+    });
+
+    // Inicialización + autopruebas mínimas
+    function init() {
+      actualizarGrados(nivelSelect.value);
+      actualizarUIporModalidad();
+      updateEstrategiasSummary();
+      updateCamposSummary();
+      renderContenidosOptions();
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      try { init(); } catch (err) { console.error('Init error:', err); }
+      // Intentar precargar JSON si existe
+      loadDefaultJSON();
+      // --- Mini tests (no cambian UI) ---
+      setTimeout(() => {
+        console.assert(document.getElementById('grado').options.length > 0, 'TEST: grado debe tener opciones');
+        console.assert(typeof XLSX !== 'undefined', 'TEST: SheetJS cargado');
+        // Test: funciones clave existen
+        console.assert(typeof renderContenidosOptions === 'function', 'TEST: renderContenidosOptions existe');
+        console.assert(typeof autoFillPDAFromSelected === 'function', 'TEST: autoFillPDAFromSelected existe');
+      }, 0);
+    });
+
+    // Esta función ha sido modificada para hacer la llamada a la API
+    btnGenerar.addEventListener('click', async () => {
+      const v = getValues();
+      const errores = validar(v);
+      if (errores.length) {
+        alert('Corrige:\n- ' + errores.join('\n- '));
+        return;
+      }
+      
+      const geminiApiKey = document.getElementById('gemini-api-key').value;
+      const jwtToken = document.getElementById('jwt-token').value;
+      
+      if (!geminiApiKey || !jwtToken) {
+          alert('Por favor, ingresa tu clave de Gemini y tu token de acceso.');
+          return;
+      }
+
+      // Reemplazamos la lógica de simulación con la llamada a la API
+      outputs.classList.remove('hidden');
+      document.getElementById('planeacion').value = 'Generando planeación...';
+      document.getElementById('materiales').value = 'Generando...';
+      document.getElementById('rubrica').value = 'Generando...';
+      document.getElementById('lista-cotejo').value = 'Generando...';
+
+      // Construimos el prompt que se enviará al backend
+      const promptText = `Actúa como un diseñador instruccional experto en la NEM. Con la siguiente información, genera: 1) Planeación por sesión, 2) Materiales, 3) Rúbrica (1–4), 4) Lista de cotejo.\n\nDATOS:\n- Nivel: ${v.nivel}\n- Grado: ${v.grado}\n- Modalidad: ${v.modalidad}\n- Campo(s): ${v.campos.join(', ')}\n- Tema: ${v.tema}\n- Sesiones: ${v.sesiones} de ${v.duracion} min\n- Estrategias: ${v.estrategias.join(', ')}\n- Objetivos: ${v.objetivos.join('; ')}\n- Productos: ${v.productos.join('; ')}\n- Recursos: ${v.recursos}\n- Contenidos: ${v.contenidos.join('; ')}\n- PDA: ${v.pda.join('; ')}\n\nFormato: títulos claros, viñetas concretas, tiempos por fase, criterios alineados a objetivos.`;
+      
+      document.getElementById('prompt-sugerido').value = promptText;
+
+      try {
+        const response = await fetch('https://chromes.amecrec.org/api/adia_generate.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${jwtToken}`
+          },
+          body: JSON.stringify({
+            gemini_api_key: geminiApiKey,
+            prompt_data: {
+              instrucciones: promptText
+            }
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.ok) {
+          // El backend solo devuelve un texto. Llenamos todas las áreas con él por ahora.
+          // La mejora futura sería que el backend devuelva JSON estructurado.
+          const generatedText = result.result_text;
+          document.getElementById('planeacion').value = generatedText;
+          document.getElementById('materiales').value = generatedText;
+          document.getElementById('rubrica').value = generatedText;
+          document.getElementById('lista-cotejo').value = generatedText;
+        } else {
+          alert('Error en la generación: ' + (result.msg || result.error));
+          document.getElementById('planeacion').value = `Error: ${result.msg || result.error}`;
+        }
+      } catch (error) {
+        alert('Error de conexión con el servidor. Verifica tu conexión o el token.');
+        document.getElementById('planeacion').value = `Error de conexión: ${error.message}`;
+      }
+      
+      outputs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // Se eliminaron las funciones de simulación de respuesta (construirPlaneacion, construirMateriales, etc.)
+    // porque ahora el backend se encarga de esa lógica.
+
+    function getValues() {
+      const modalidad = document.querySelector('input[name="modalidad"]:checked').value;
+      const campos = modalidad === 'Proyecto'
+        ? Array.from(document.querySelectorAll('input[name=\"campo-proyecto\"]:checked')).map(x => x.value)
+        : [document.getElementById('campo-formativo').value];
+      const contenidosSel = Array.from(document.querySelectorAll('.contenido-input:checked')).map(x => x.value);
+      return {
+        nivel: nivelSelect.value,
+        grado: gradoSelect.value,
+        modalidad,
+        campos,
+        tema: document.getElementById('tema-detonador').value.trim(),
+        contenidos: contenidosSel,
+        pda: document.getElementById('pda').value.split(';').map(x => x.trim()).filter(Boolean),
+        sesiones: parseInt(document.getElementById('numero-sesiones').value || '0', 10),
+        duracion: parseInt(document.getElementById('duracion-sesion').value || '0', 10),
+        estrategias: selectedEstrategias(),
+        objetivos: document.getElementById('objetivos').value.split(';').map(x => x.trim()).filter(Boolean),
+        productos: document.getElementById('productos').value.split(';').map(x => x.trim()).filter(Boolean),
+        recursos: document.getElementById('recursos').value.trim()
+      };
+    }
+
+    function validar(v) {
+      const errores = [];
+      if (!v.tema) errores.push('Tema detonador es obligatorio.');
+      if (v.contenidos.length === 0) errores.push('Selecciona al menos un Contenido.');
+      if (v.pda.length === 0) errores.push('Agrega al menos un PDA.');
+      if (!v.sesiones || v.sesiones < 1) errores.push('Número de sesiones debe ser ≥ 1.');
+      if (!v.duracion || v.duracion < 20) errores.push('Duración por sesión debe ser ≥ 20 min.');
+      const modalidad = v.modalidad;
+      if (modalidad === 'Proyecto' && v.campos.length < 2) errores.push('En modalidad Proyecto, selecciona al menos 2 campos.');
+      if (!v.estrategias.length) errores.push('Selecciona al menos una estrategia de evaluación.');
+      return errores;
+    }
+    
+    // Listeners de alto nivel
+    nivelSelect.addEventListener('change', (e) => { actualizarGrados(e.target.value); renderContenidosOptions(); autoFillPDAFromSelected(true); });
+    modalidadRadios.forEach(r => r.addEventListener('change', () => { actualizarUIporModalidad(); autoFillPDAFromSelected(true); }));
+  </script>
+</body>
+</html>
