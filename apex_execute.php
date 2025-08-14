@@ -2,13 +2,13 @@
 /**
  * apex_execute.php
  * Cargador/ejecutor del motor APEX con compatibilidad amplia de adapters.
- * NO requiere modificar tu adapter_adia_plan.php existente.
+ * No requiere modificar tu adapter si este expone alguna firma conocida.
  */
 
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-/* ====== CORS básico (permite tu subdominio y localhost) ====== */
+/* ====== CORS básico (permite localhost y *.amecrec.org) ====== */
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if ($origin && (preg_match('~^https?://(localhost(:\d+)?|.*\.amecrec\.org)$~', $origin))) {
   header("Access-Control-Allow-Origin: $origin");
@@ -47,32 +47,31 @@ if (!$module || !is_array($data)) {
 /* Acepta: "adia_plan", "adia.plan", "adia/plan" → adapter_adia_plan.php */
 $norm = strtolower(trim($module));
 $norm = str_replace(['.', '/','\\'], '_', $norm);
+$adapterFile = __DIR__ . "/adapter_{${''}norm}.php"; // evita reemplazos accidentales
 $adapterFile = __DIR__ . "/adapter_{$norm}.php";
+
 if (!is_file($adapterFile)) {
   http_json(404, ['ok'=>false,'error'=>"Módulo '{$module}' no encontrado (busqué adapter_{$norm}.php)"]);
 }
 
 /* ====== Cargar adapter sin imponer firma ====== */
-$beforeFuncs  = get_defined_functions()['user'];
-$beforeClasses= get_declared_classes();
-$beforeVars   = array_keys(get_defined_vars());
+$beforeFuncs   = get_defined_functions()['user'];
+$beforeClasses = get_declared_classes();
 
 ob_start();
-require_once $adapterFile; // tu adapter puede declarar funciones/clases/variables o incluso hacer echo
+require_once $adapterFile; // el adapter puede declarar funciones/clases o imprimir algo
 $adapterEcho = trim(ob_get_clean());
 
 $afterFuncs   = get_defined_functions()['user'];
 $afterClasses = get_declared_classes();
-$newFuncs     = array_values(array_diff($afterFuncs, $beforeFuncs));
-$newClasses   = array_values(array_diff($afterClasses, $beforeClasses));
 
 /* ====== Estrategia de ejecución (por compatibilidad) ======
    1) Función apex_run($data)
    2) Función run_<module_normalizado>($data)  e.g. run_adia_plan
    3) Clase ApexAdapter con método run($data)
    4) Clase Adapter<Camello> con método run($data), ej. AdapterAdiaPlan
-   5) Variable $APEX_RESPONSE definida por el adapter (array)
-   6) Si el adapter produjo output JSON directo, lo devolvemos tal cual
+   5) Variable global $APEX_RESPONSE (array)
+   6) Si el adapter hizo echo JSON, devolverlo tal cual
 */
 $response = null;
 $errors   = [];
@@ -87,28 +86,20 @@ try {
     $obj = new ApexAdapter();
     $response = $obj->run($data);
   } else {
-    // Buscar clase Adapter<Camello>
-    $candClass = "Adapter" . camelize($norm); // p.ej. AdapterAdiaPlan
+    $candClass = "Adapter" . camelize($norm); // p. ej. AdapterAdiaPlan
     if (class_exists($candClass) && method_exists($candClass,'run')) {
       $obj = new $candClass();
       $response = $obj->run($data);
     }
   }
 
-  // ¿Variable global $APEX_RESPONSE?
   if ($response === null && array_key_exists('APEX_RESPONSE', $GLOBALS)) {
     $response = $GLOBALS['APEX_RESPONSE'];
   }
 
-  // ¿El adapter hizo echo de JSON?
   if ($response === null && $adapterEcho !== '') {
     $maybe = json_decode($adapterEcho, true);
-    if (is_array($maybe)) {
-      $response = $maybe;
-    } else {
-      // si no es JSON, lo regresamos como texto informativo
-      $response = ['adapter_output'=>$adapterEcho];
-    }
+    $response = is_array($maybe) ? $maybe : ['adapter_output'=>$adapterEcho];
   }
 
 } catch (Throwable $e) {
