@@ -1,45 +1,76 @@
 <?php
-// apex_execute_min.php — loader mínimo para diagnóstico
+/**
+ * apex_execute_min.php
+ * Loader mínimo y autónomo para validar que PHP recibe JSON y responde.
+ * No depende de adapters. Implementa dos módulos de prueba:
+ *  - "ping"      → responde pong
+ *  - "adia_plan" → devuelve eco de la planeación recibida
+ */
+
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-$raw = file_get_contents('php://input') ?: '';
-$in  = json_decode($raw, true);
+/* CORS básico para pruebas (localhost y *.amecrec.org) */
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($origin && preg_match('~^https?://(localhost(:\d+)?|.*\.amecrec\.org)$~', $origin)) {
+  header("Access-Control-Allow-Origin: $origin");
+  header("Vary: Origin");
+}
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
-$module = is_array($in) ? ($in['module'] ?? null) : null;
-$data   = is_array($in) ? ($in['data'] ?? $in['payload'] ?? $in['entrada'] ?? null) : null;
-
-if (!$module) { echo json_encode(['ok'=>false,'error'=>'Falta module']); exit; }
-
-$norm = strtolower(str_replace(['.','/','\\'],'_', $module));
-$adapter = __DIR__ . "/adapter_{$norm}.php";
-
-$out = [
-  'ok' => true,
-  'received' => ['keys'=> is_array($in)?array_keys($in):null, 'has_data'=>is_array($data)],
-  'module' => $module,
-  'adapter' => ['path'=>$adapter, 'exists'=>file_exists($adapter)]
-];
-
-if (!file_exists($adapter)) { echo json_encode($out); exit; }
-
-// capturar cualquier echo del adapter
-ob_start();
-include $adapter;
-$echoed = trim(ob_get_clean());
-
-// si el adapter define apex_run($data), la ejecutamos
-if (function_exists('apex_run') && is_array($data)) {
-  try {
-    $res = apex_run($data);
-    $out['run_apex_run'] = true;
-    $out['result'] = $res;
-  } catch (Throwable $e) {
-    $out['run_apex_run'] = false;
-    $out['error_run'] = $e->getMessage();
-  }
+/* Función para responder y salir */
+function out(int $code, array $payload): void {
+  http_response_code($code);
+  echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+  exit;
 }
 
-$out['adapter_echo_preview'] = mb_substr($echoed, 0, 200);
+/* Entrada */
+$raw = file_get_contents('php://input') ?: '';
+$in  = json_decode($raw, true);
+if (!is_array($in)) {
+  out(400, ['ok'=>false, 'error'=>'JSON inválido', 'raw_len'=>strlen($raw)]);
+}
 
-echo json_encode($out, JSON_UNESCAPED_UNICODE);
+$module = $in['module'] ?? $in['task'] ?? null;
+$data   = $in['data']   ?? $in['payload'] ?? $in['entrada'] ?? [];
+
+/* Ruteo mínimo */
+switch ($module) {
+  case 'ping':
+    out(200, [
+      'ok'      => true,
+      'module'  => 'ping',
+      'message' => 'pong',
+      'echo'    => $data,
+      'ts'      => date('c'),
+    ]);
+
+  case 'adia_plan':
+    $grado     = trim((string)($data['grado'] ?? ''));
+    $campo     = trim((string)($data['campo'] ?? ($data['campo_formativo'] ?? '')));
+    $contenido = trim((string)($data['contenido'] ?? ''));
+    $sesiones  = (int)($data['sesiones'] ?? ($data['numero_sesiones'] ?? 4));
+    $duracion  = (int)($data['duracion'] ?? ($data['duracion_sesion'] ?? 45));
+    $tema      = trim((string)($data['tema'] ?? ''));
+
+    out(200, [
+      'ok'     => true,
+      'module' => 'adia_plan',
+      'preview'=> [
+        'resumen'  => "Plan para $grado · $campo · '$contenido' ($sesiones x $duracion min)".($tema? " · Tema: $tema":""),
+        'entrada'  => $data
+      ],
+      'ts' => date('c')
+    ]);
+
+  default:
+    out(404, [
+      'ok'=>false,
+      'error'=>"Módulo no reconocido",
+      'module_recibido'=>$module,
+      'keys'=>array_keys($in)
+    ]);
+}
