@@ -54,4 +54,88 @@ if (!is_file($adapterFile)) {
 
 /* ====== Cargar adapter sin imponer firma ====== */
 $beforeFuncs  = get_defined_functions()['user'];
-$b
+$beforeClasses= get_declared_classes();
+$beforeVars   = array_keys(get_defined_vars());
+
+ob_start();
+require_once $adapterFile; // tu adapter puede declarar funciones/clases/variables o incluso hacer echo
+$adapterEcho = trim(ob_get_clean());
+
+$afterFuncs   = get_defined_functions()['user'];
+$afterClasses = get_declared_classes();
+$newFuncs     = array_values(array_diff($afterFuncs, $beforeFuncs));
+$newClasses   = array_values(array_diff($afterClasses, $beforeClasses));
+
+/* ====== Estrategia de ejecución (por compatibilidad) ======
+   1) Función apex_run($data)
+   2) Función run_<module_normalizado>($data)  e.g. run_adia_plan
+   3) Clase ApexAdapter con método run($data)
+   4) Clase Adapter<Camello> con método run($data), ej. AdapterAdiaPlan
+   5) Variable $APEX_RESPONSE definida por el adapter (array)
+   6) Si el adapter produjo output JSON directo, lo devolvemos tal cual
+*/
+$response = null;
+$errors   = [];
+
+try {
+  if (function_exists('apex_run')) {
+    $response = apex_run($data);
+  } elseif (function_exists("run_{$norm}")) {
+    $fn = "run_{$norm}";
+    $response = $fn($data);
+  } elseif (class_exists('ApexAdapter') && method_exists('ApexAdapter','run')) {
+    $obj = new ApexAdapter();
+    $response = $obj->run($data);
+  } else {
+    // Buscar clase Adapter<Camello>
+    $candClass = "Adapter" . camelize($norm); // p.ej. AdapterAdiaPlan
+    if (class_exists($candClass) && method_exists($candClass,'run')) {
+      $obj = new $candClass();
+      $response = $obj->run($data);
+    }
+  }
+
+  // ¿Variable global $APEX_RESPONSE?
+  if ($response === null && array_key_exists('APEX_RESPONSE', $GLOBALS)) {
+    $response = $GLOBALS['APEX_RESPONSE'];
+  }
+
+  // ¿El adapter hizo echo de JSON?
+  if ($response === null && $adapterEcho !== '') {
+    $maybe = json_decode($adapterEcho, true);
+    if (is_array($maybe)) {
+      $response = $maybe;
+    } else {
+      // si no es JSON, lo regresamos como texto informativo
+      $response = ['adapter_output'=>$adapterEcho];
+    }
+  }
+
+} catch (Throwable $e) {
+  $errors[] = $e->getMessage();
+}
+
+/* ====== Validación y salida ====== */
+if ($response === null) {
+  http_json(500, [
+    'ok'=>false,
+    'error'=>'No se encontró forma de ejecutar el adapter',
+    'module'=>$module,
+    'buscado'=>[
+      'function apex_run',
+      "function run_{$norm}",
+      'class ApexAdapter::run',
+      'class Adapter'.camelize($norm).'::run',
+      'var $APEX_RESPONSE',
+      'echo JSON'
+    ],
+    'adapter_output_preview'=> mb_substr($adapterEcho, 0, 400),
+    'errors'=>$errors
+  ]);
+}
+
+http_json(200, [
+  'ok'=>true,
+  'module'=>$module,
+  'result'=>$response
+]);
