@@ -1,12 +1,20 @@
-# Habilitar CORS básico
+# Habilitar CORS solo para dominios autorizados
 <IfModule mod_headers.c>
-    Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "POST, GET, OPTIONS"
+    SetEnvIf Origin "^(https?://(localhost(:[0-9]+)?|.*\.amecrec\.org))$" AccessControlAllowOrigin=$0
+    Header set Access-Control-Allow-Origin %{AccessControlAllowOrigin}e env=AccessControlAllowOrigin
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
     Header set Access-Control-Allow-Headers "Content-Type, Authorization"
 </IfModule>
 
-# Evitar listado de directorios
+# Forzar UTF-8
+AddDefaultCharset UTF-8
+
+# Deshabilitar listado de directorios
 Options -Indexes
 
-# Forzar manejo de errores a JSON
-ErrorDocument 404 /api/not_found.json
+# Bloquear ejecución de scripts en carpetas de subida
+<FilesMatch "\.(htaccess|htpasswd|ini|phps|fla|psd|log|sh)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
