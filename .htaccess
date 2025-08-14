@@ -1,0 +1,12 @@
+# Habilitar CORS básico
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "POST, GET, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
+
+# Evitar listado de directorios
+Options -Indexes
+
+# Forzar manejo de errores a JSON
+ErrorDocument 404 /api/not_found.json
